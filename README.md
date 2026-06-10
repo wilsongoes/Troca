@@ -59,6 +59,7 @@ npm run dev   # abre http://localhost:5173
 | POST   | `/api/producoes`              | `{produtoId, quantidade, produtorId, transformadorId, cascata}` — explode a Estrutura em Trocas (recursivo com `cascata`) |
 | POST   | `/api/trocas/grupo/{id}/efetivar` | Reserva vira realidade: passa a contar no saldo |
 | DELETE | `/api/trocas/grupo/{id}`      | Cancela reserva (só RESERVADA — efetivada é imutável) |
+| GET    | `/api/planejamentos?produtoId=&quantidade=&produtorId=` | MRP: explode a Estrutura × estoque disponível → lista de compras |
 
 ## Validação já executada
 
@@ -138,8 +139,29 @@ Posições finais (todas derivadas):
 > "Tudo na vida são relações de troca. Você até pode não conseguir alcançar
 > a abstração, mas o modelo funciona." — a hipótese, até agora, se sustenta.
 
+## O caso do Muro — planejamento de compras, nota fiscal e o ciclo do governo
+
+Mão de obra e materiais convivem na MESMA Estrutura:
+`Muro = 8 Horas de Trabalho + 1000 Tijolos + 1 Saco de Cimento + 100 Litros de Água`.
+
+**Planejamento de compras (MRP) é pura leitura** — explode a Estrutura,
+abate do estoque disponível (derivado das trocas) e o resto é lista de
+compras. Com estoque vazio: "comprar 1000 tijolos, 1 cimento, 100L água,
+contratar 8h". Após comprar e contratar: tudo zero — pronto para construir.
+
+**A nota fiscal é um grupo de troca com 5 pernas**: materiais entram,
+pagamento sai, e o imposto vai para o Governo — na mesma transação atômica.
+O Governo então devolve `Serviço Público` aos Cidadãos: o ciclo que vai do
+tijolo ao imposto e volta como serviço fecha sem nenhum conceito novo.
+
+Posições finais: Construtora `1 Muro, −1344 BRL` (o custo total do muro
+emergiu: 800 materiais + 144 imposto + 400 mão de obra); Governo
+`+144 BRL, −1 Serviço Público`; Pedreiro `−8h, +400 BRL`.
+
 ## Próximos passos da hipótese
 
-- Custo por estrutura: quanto custou a Funcionalidade? (40h × valor da hora
-  derivado do salário) — precificação recursiva pela Estrutura.
+- Custo derivado por estrutura: precificação recursiva (a hora vale o que o
+  salário diz; o muro custa o que as trocas dizem).
+- Eventos que disparam eventos ("sistema quântico"): venda efetivada dispara
+  planejamento, que dispara pedidos de compra como Reservas com fornecedores.
 - Orçamento e permissões: cabem como Reserva e Estrutura, ou pedem o quarto conceito?

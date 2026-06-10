@@ -280,6 +280,13 @@ function AbaProducao({ entidades, mostrarErro }) {
   const [bom, setBom] = useState([]);
   const [resultado, setResultado] = useState(null);
   const [posicao, setPosicao] = useState([]);
+  const [plano, setPlano] = useState(null);
+
+  const planejar = async () => {
+    try {
+      setPlano(await api.planejar(form.produtoId, form.quantidade, form.produtorId));
+    } catch (e) { mostrarErro(e.message); }
+  };
 
   useEffect(() => {
     if (!form.produtoId) { setBom([]); return; }
@@ -327,6 +334,8 @@ function AbaProducao({ entidades, mostrarErro }) {
               onChange={(e) => setCascata(e.target.checked)} />
             Cascata (produz componentes em falta)
           </label>
+          <button type="button" className="leve" disabled={!form.produtoId || !form.produtorId}
+            onClick={planejar}>Planejar compras</button>
           <button type="submit">Produzir</button>
         </div>
 
@@ -348,6 +357,26 @@ function AbaProducao({ entidades, mostrarErro }) {
           <p>Esse produto não tem Estrutura cadastrada — cadastre os componentes na aba Estruturas.</p>
         )}
       </form>
+
+      {plano && (
+        <div className="painel">
+          <h3>Plano de compras <small>(Estrutura explodida × estoque disponível)</small></h3>
+          <table>
+            <thead><tr><th>Objeto</th><th>Necessário</th><th>Do estoque</th><th>A produzir</th><th>Comprar / contratar</th></tr></thead>
+            <tbody>
+              {plano.map((p) => (
+                <tr key={p.objetoId}>
+                  <td>{p.nome} <span className="tag">{p.tipo}</span></td>
+                  <td>{p.necessario}</td>
+                  <td>{p.doEstoque}</td>
+                  <td>{p.aProduzir}</td>
+                  <td className={p.comprar > 0 ? 'negativo' : 'positivo'}>{p.comprar}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {resultado && (
         <div className="painel">
