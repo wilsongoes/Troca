@@ -252,6 +252,110 @@ function AbaTrocas({ entidades, mostrarErro }) {
   );
 }
 
+function AbaProducao({ entidades, mostrarErro }) {
+  const [form, setForm] = useState({ produtoId: '', quantidade: '1', produtorId: '', transformadorId: '' });
+  const [bom, setBom] = useState([]);
+  const [resultado, setResultado] = useState(null);
+  const [posicao, setPosicao] = useState([]);
+
+  useEffect(() => {
+    if (!form.produtoId) { setBom([]); return; }
+    api.listarEstrutura(form.produtoId).then(setBom).catch(() => setBom([]));
+  }, [form.produtoId]);
+
+  const atualizarPosicao = useCallback((produtorId) => {
+    if (!produtorId) { setPosicao([]); return; }
+    api.posicao(produtorId).then(setPosicao).catch(() => setPosicao([]));
+  }, []);
+
+  useEffect(() => atualizarPosicao(form.produtorId), [form.produtorId, atualizarPosicao]);
+
+  const produzir = async (ev) => {
+    ev.preventDefault();
+    try {
+      const trocas = await api.produzir({
+        produtoId: Number(form.produtoId),
+        quantidade: Number(form.quantidade),
+        produtorId: Number(form.produtorId),
+        transformadorId: Number(form.transformadorId),
+      });
+      setResultado(trocas);
+      atualizarPosicao(form.produtorId);
+    } catch (e) { mostrarErro(e.message); }
+  };
+
+  const qtd = Number(form.quantidade) || 0;
+
+  return (
+    <section>
+      <form onSubmit={produzir} className="painel">
+        <div className="linha-form">
+          <SeletorEntidade entidades={entidades} value={form.produtoId}
+            onChange={(v) => setForm({ ...form, produtoId: v })} placeholder="Produto a fabricar" />
+          <input type="number" min="0.0001" step="any" value={form.quantidade}
+            onChange={(e) => setForm({ ...form, quantidade: e.target.value })} />
+          <SeletorEntidade entidades={entidades} value={form.produtorId}
+            onChange={(v) => setForm({ ...form, produtorId: v })} placeholder="Produtor (dono do estoque)" />
+          <SeletorEntidade entidades={entidades} value={form.transformadorId}
+            onChange={(v) => setForm({ ...form, transformadorId: v })} placeholder="Transformador (linha)" />
+          <button type="submit">Produzir</button>
+        </div>
+
+        {bom.length > 0 && (
+          <table>
+            <thead><tr><th>Vai consumir</th><th>Por unidade</th><th>Total</th></tr></thead>
+            <tbody>
+              {bom.map((s) => (
+                <tr key={s.id}>
+                  <td>{s.filho.nome} <span className="tag">{s.filho.tipo}</span></td>
+                  <td>{s.quantidade}</td>
+                  <td>{(Number(s.quantidade) * qtd) || '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+        {form.produtoId && bom.length === 0 && (
+          <p>Esse produto não tem Estrutura cadastrada — cadastre os componentes na aba Estruturas.</p>
+        )}
+      </form>
+
+      {resultado && (
+        <div className="painel">
+          <h3>Produção registrada <small>({resultado.length} trocas no grupo)</small></h3>
+          <table>
+            <thead><tr><th>De</th><th>Para</th><th>Objeto</th><th>Qtd</th></tr></thead>
+            <tbody>
+              {resultado.map((t) => (
+                <tr key={t.id}>
+                  <td>{t.de.nome}</td><td>{t.para.nome}</td><td>{t.objeto.nome}</td><td>{t.quantidade}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {form.produtorId && posicao.length > 0 && (
+        <div className="painel">
+          <h3>Posição do produtor <small>(derivada das trocas)</small></h3>
+          <table>
+            <thead><tr><th>Objeto</th><th>Saldo</th></tr></thead>
+            <tbody>
+              {posicao.map((p) => (
+                <tr key={p.objetoId}>
+                  <td>{p.objetoNome} <span className="tag">{p.objetoTipo}</span></td>
+                  <td className={p.saldo < 0 ? 'negativo' : 'positivo'}>{p.saldo}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
+}
+
 export default function App() {
   const [aba, setAba] = useState('entidades');
   const [entidades, recarregar] = useEntidades();
@@ -270,7 +374,7 @@ export default function App() {
       </header>
 
       <nav>
-        {[['entidades', 'Entidades'], ['estruturas', 'Estruturas'], ['trocas', 'Trocas']].map(([k, label]) => (
+        {[['entidades', 'Entidades'], ['estruturas', 'Estruturas'], ['trocas', 'Trocas'], ['producao', 'Produção']].map(([k, label]) => (
           <button key={k} className={aba === k ? 'ativo' : ''} onClick={() => setAba(k)}>{label}</button>
         ))}
       </nav>
@@ -280,6 +384,7 @@ export default function App() {
       {aba === 'entidades' && <AbaEntidades entidades={entidades} recarregar={recarregar} mostrarErro={mostrarErro} />}
       {aba === 'estruturas' && <AbaEstruturas entidades={entidades} mostrarErro={mostrarErro} />}
       {aba === 'trocas' && <AbaTrocas entidades={entidades} mostrarErro={mostrarErro} />}
+      {aba === 'producao' && <AbaProducao entidades={entidades} mostrarErro={mostrarErro} />}
     </main>
   );
 }

@@ -56,6 +56,7 @@ npm run dev   # abre http://localhost:5173
 | POST   | `/api/estruturas`             | `{paiId, filhoId, quantidade, papel}`       |
 | GET    | `/api/trocas?entidadeId=`     | Histórico de trocas                         |
 | POST   | `/api/trocas`                 | `{tipo, descricao, pernas:[{deId, paraId, objetoId, quantidade}]}` |
+| POST   | `/api/producoes`              | `{produtoId, quantidade, produtorId, transformadorId}` — explode a Estrutura em Trocas |
 
 ## Validação já executada
 
@@ -68,10 +69,23 @@ Caso da fábrica de TV, registrado via API:
    - Fábrica: `+2500 BRL`, `−1 TV`
    - João: `+1 TV`, `−2500 BRL`
 
+## Produção — validada
+
+Produção não precisou de conceito novo: é uma Troca com uma entidade
+transformadora (a Linha de Produção). O produtor entrega os componentes
+(a Estrutura diz quanto), o transformador devolve o produto — mesmo grupo,
+atômico, com validação de estoque derivado:
+
+1. COMPRA: Fornecedor → Fábrica: 10 Telas + 10 Placas; Fábrica → Fornecedor: 3000 BRL.
+2. Produzir 100 TVs foi **bloqueado**: "Estoque insuficiente de Tela LED 50:
+   precisa de 100, disponível 10" — e o estoque consultado também é derivado.
+3. PRODUCAO de 5 TVs: Fábrica → Linha: 5 Telas + 5 Placas; Linha → Fábrica: 5 TVs.
+4. Posição final da Fábrica (tudo derivado): TV `4` (−1 vendida +5 produzidas),
+   Tela `5`, Placa `5`, BRL `−500` (2500 da venda − 3000 da compra = dívida).
+
 ## Próximos passos da hipótese
 
 - Modelar o caso GestaoProjeto: projeto/tarefa como Estrutura, alocação e
   conclusão como Troca.
-- Explosão de estrutura (BOM recursivo): produzir 1 TV consome 1 Tela + 1 Placa
-  do estoque — produção também é troca.
+- BOM recursivo (componente que também tem estrutura) e produção em cascata.
 - Testar onde a teoria range: reserva (troca futura?), orçamento, permissões.

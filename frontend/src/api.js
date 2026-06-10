@@ -25,4 +25,6 @@ export const api = {
 
   listarTrocas: (entidadeId) => req(`/trocas${entidadeId ? `?entidadeId=${entidadeId}` : ''}`),
   registrarTroca: (dados) => req('/trocas', { method: 'POST', body: JSON.stringify(dados) }),
+
+  produzir: (dados) => req('/producoes', { method: 'POST', body: JSON.stringify(dados) }),
 };
