@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(try { \\(Get-Command psql -ErrorAction Stop\\).Source } catch { \"psql nao encontrado\" }; try { \\(Get-Command docker -ErrorAction Stop\\).Source } catch { \"docker nao encontrado\" })",
+      "PowerShell(Get-ChildItem D:\\\\hipotese\\\\backend -Recurse -File | Select-Object -ExpandProperty FullName | ForEach-Object { $_.Replace\\('D:\\\\hipotese\\\\backend\\\\',''\\) })",
+      "PowerShell($env:PGPASSWORD='postgres'; & \"C:\\\\Program Files\\\\PostgreSQL\\\\17\\\\bin\\\\psql.exe\" -U postgres -h localhost -w -c \"SELECT version\\(\\);\" 2>&1 | Select-Object -First 2)"
+    ]
+  }
+}

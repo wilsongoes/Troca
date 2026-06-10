@@ -1,0 +1,77 @@
+# Sistema de Troca — a hipótese
+
+> Todo sistema de informação pode ser reduzido a três conceitos:
+> **Entidade** (a coisa), **Estrutura** (uma coisa é formada por outras coisas)
+> e **Troca** (uma coisa sai de alguém e vai para alguém).
+> O resto — venda, imposto, alocação, estoque, saldo — é abstração sobre esses três.
+
+## O modelo
+
+| Tabela      | O que guarda                                                                 |
+|-------------|------------------------------------------------------------------------------|
+| `entidade`  | Qualquer coisa: pessoa, produto, carro, projeto, dinheiro. Tipo livre + atributos JSONB. |
+| `estrutura` | Composição: pai é formado por filho, com quantidade e papel (carro → 4 rodas). |
+| `troca`     | O fluxo: `de` → `para` : `objeto` (quantidade). Pernas da mesma transação compartilham um `grupoId`. |
+
+### O insight central
+
+- **Dinheiro é Entidade** — não existe caso especial. Uma venda são duas pernas
+  do mesmo grupo: `Fábrica → Cliente : TV (1)` e `Cliente → Fábrica : BRL (2500)`.
+- **Estoque e saldo não são cadastrados** — emergem das trocas:
+  `posição = soma(recebido) − soma(entregue)`, por objeto.
+- A história das trocas é imutável; entidades são desativadas, nunca apagadas.
+
+## Stack
+
+- Backend: Java 25 + Spring Boot 4 + PostgreSQL 17 (Docker) — porta 8080
+- Frontend: React + Vite — porta 5173
+
+## Como rodar
+
+```powershell
+# 1. Banco (uma vez; depois: docker start hipotese-postgres)
+docker run -d --name hipotese-postgres -e POSTGRES_USER=hipotese `
+  -e POSTGRES_PASSWORD=hipotese -e POSTGRES_DB=hipotese `
+  -p 5432:5432 -v hipotese_pgdata:/var/lib/postgresql/data postgres:17
+
+# 2. Backend (JAVA_HOME precisa apontar para o JDK 25)
+$env:JAVA_HOME='C:\Program Files\Eclipse Adoptium\jdk-25.0.2.10-hotspot'
+cd backend
+.\mvnw.cmd spring-boot:run
+
+# 3. Frontend
+cd frontend
+npm run dev   # abre http://localhost:5173
+```
+
+## API
+
+| Método | Rota                          | O quê                                       |
+|--------|-------------------------------|---------------------------------------------|
+| GET    | `/api/entidades?tipo=`        | Lista entidades ativas                      |
+| POST   | `/api/entidades`              | Cria entidade `{nome, tipo, descricao, atributos}` |
+| DELETE | `/api/entidades/{id}`         | Desativa (exclusão lógica)                  |
+| GET    | `/api/entidades/{id}/posicao` | **Posição derivada das trocas**             |
+| GET    | `/api/estruturas?paiId=`      | Do que o pai é formado                      |
+| POST   | `/api/estruturas`             | `{paiId, filhoId, quantidade, papel}`       |
+| GET    | `/api/trocas?entidadeId=`     | Histórico de trocas                         |
+| POST   | `/api/trocas`                 | `{tipo, descricao, pernas:[{deId, paraId, objetoId, quantidade}]}` |
+
+## Validação já executada
+
+Caso da fábrica de TV, registrado via API:
+
+1. Entidades: Fábrica TVCo, João, TV 50", Real BRL, Tela LED, Placa-mãe.
+2. Estrutura: TV = Tela (1) + Placa-mãe (1).
+3. Troca VENDA (grupo único, atômica): Fábrica → João: TV (1); João → Fábrica: BRL (2500).
+4. Posição resultante — **sem nenhum cadastro de estoque**:
+   - Fábrica: `+2500 BRL`, `−1 TV`
+   - João: `+1 TV`, `−2500 BRL`
+
+## Próximos passos da hipótese
+
+- Modelar o caso GestaoProjeto: projeto/tarefa como Estrutura, alocação e
+  conclusão como Troca.
+- Explosão de estrutura (BOM recursivo): produzir 1 TV consome 1 Tela + 1 Placa
+  do estoque — produção também é troca.
+- Testar onde a teoria range: reserva (troca futura?), orçamento, permissões.
