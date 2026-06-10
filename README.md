@@ -112,9 +112,34 @@ comprometido 3, disponível 9` e BRL `a receber 7500` — sem mexer no saldo.
 Ao efetivar: TV `9`, BRL `6000`. Cancelar grupo efetivado é bloqueado —
 só reservas são canceláveis; o que aconteceu é história imutável.
 
+## GestaoProjeto — validado com ZERO código novo
+
+O teste mais forte da hipótese: o domínio de gestão de projetos rodou inteiro
+nos endpoints existentes. Nenhuma linha de backend nova — só abstração:
+
+- **Tempo é Entidade**: `Hora de Trabalho (TEMPO)` é trocável como qualquer coisa.
+- **Salário é Troca**: Wilson → OFM: 160 horas; OFM → Wilson: 12.000 BRL.
+- **Alocação é Troca**: OFM → Plataforma GRF: 40 horas.
+- **O fruto do serviço é Produção**: `Funcionalidade Vendas (RESULTADO)` tem
+  Estrutura = 40 Horas de Trabalho. A Tarefa é a transformadora: recebe as
+  horas do projeto e devolve o resultado mensurável.
+- **Adversarial**: produzir a Funcionalidade antes de alguém trabalhar foi
+  bloqueado — "Estoque insuficiente de Hora de Trabalho: precisa de 40, disponível 0".
+
+Posições finais (todas derivadas):
+
+| Entidade          | Posição                                            |
+|-------------------|----------------------------------------------------|
+| Wilson            | −160 horas, +12.000 BRL (vendeu seu tempo)         |
+| OFM Empresa       | +120 horas, −12.000 BRL (banco de horas restante)  |
+| Plataforma GRF    | 1 Funcionalidade, 0 horas (entregou, consumiu tudo)|
+| Módulo de Vendas  | +40 horas, −1 Funcionalidade (o "timesheet" da tarefa é a posição dela) |
+
+> "Tudo na vida são relações de troca. Você até pode não conseguir alcançar
+> a abstração, mas o modelo funciona." — a hipótese, até agora, se sustenta.
+
 ## Próximos passos da hipótese
 
-- Modelar o caso GestaoProjeto: projeto/tarefa como Estrutura, alocação e
-  conclusão como Troca.
-- Testar onde a teoria range: orçamento, permissões, precificação por
-  estrutura (custo da TV = soma recursiva dos componentes).
+- Custo por estrutura: quanto custou a Funcionalidade? (40h × valor da hora
+  derivado do salário) — precificação recursiva pela Estrutura.
+- Orçamento e permissões: cabem como Reserva e Estrutura, ou pedem o quarto conceito?
