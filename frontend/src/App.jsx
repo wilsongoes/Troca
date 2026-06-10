@@ -75,13 +75,16 @@ function AbaEntidades({ entidades, recarregar, mostrarErro }) {
           <h3>Posição de {posicaoDe.nome} <small>(derivada das trocas — nada cadastrado)</small></h3>
           {posicao.length === 0 ? <p>Nenhuma troca registrada ainda.</p> : (
             <table>
-              <thead><tr><th>Objeto</th><th>Tipo</th><th>Saldo</th></tr></thead>
+              <thead><tr><th>Objeto</th><th>Tipo</th><th>Saldo</th><th>Comprometido</th><th>A receber</th><th>Disponível</th></tr></thead>
               <tbody>
                 {posicao.map((p) => (
                   <tr key={p.objetoId}>
                     <td>{p.objetoNome}</td>
                     <td><span className="tag">{p.objetoTipo}</span></td>
                     <td className={p.saldo < 0 ? 'negativo' : 'positivo'}>{p.saldo}</td>
+                    <td>{p.comprometido}</td>
+                    <td>{p.aReceber}</td>
+                    <td className={p.disponivel < 0 ? 'negativo' : 'positivo'}>{p.disponivel}</td>
                   </tr>
                 ))}
               </tbody>
@@ -168,6 +171,7 @@ function AbaTrocas({ entidades, mostrarErro }) {
   const [trocas, setTrocas] = useState([]);
   const [tipo, setTipo] = useState('VENDA');
   const [descricao, setDescricao] = useState('');
+  const [reservada, setReservada] = useState(false);
   const pernaVazia = { deId: '', paraId: '', objetoId: '', quantidade: '1' };
   const [pernas, setPernas] = useState([{ ...pernaVazia }]);
 
@@ -186,6 +190,7 @@ function AbaTrocas({ entidades, mostrarErro }) {
       await api.registrarTroca({
         tipo,
         descricao,
+        reservada,
         pernas: pernas.map((p) => ({
           deId: Number(p.deId), paraId: Number(p.paraId),
           objetoId: Number(p.objetoId), quantidade: Number(p.quantidade),
@@ -193,6 +198,7 @@ function AbaTrocas({ entidades, mostrarErro }) {
       });
       setPernas([{ ...pernaVazia }]);
       setDescricao('');
+      setReservada(false);
       carregar();
     } catch (e) { mostrarErro(e.message); }
   };
@@ -205,6 +211,11 @@ function AbaTrocas({ entidades, mostrarErro }) {
             onChange={(e) => setTipo(e.target.value)} required />
           <input placeholder="Descrição" value={descricao}
             onChange={(e) => setDescricao(e.target.value)} />
+          <label className="check">
+            <input type="checkbox" checked={reservada}
+              onChange={(e) => setReservada(e.target.checked)} />
+            Reserva (compromisso futuro)
+          </label>
         </div>
         {pernas.map((p, i) => (
           <div className="linha-form" key={i}>
@@ -233,17 +244,28 @@ function AbaTrocas({ entidades, mostrarErro }) {
       </form>
 
       <table>
-        <thead><tr><th>Data</th><th>Tipo</th><th>De</th><th>Para</th><th>Objeto</th><th>Qtd</th><th>Descrição</th></tr></thead>
+        <thead><tr><th>Data</th><th>Tipo</th><th>Status</th><th>De</th><th>Para</th><th>Objeto</th><th>Qtd</th><th>Descrição</th><th></th></tr></thead>
         <tbody>
           {trocas.map((t) => (
             <tr key={t.id}>
               <td>{new Date(t.data).toLocaleString('pt-BR')}</td>
               <td><span className="tag">{t.tipo}</span></td>
+              <td><span className={t.status === 'RESERVADA' ? 'tag reservada' : 'tag'}>{t.status}</span></td>
               <td>{t.de.nome}</td>
               <td>{t.para.nome}</td>
               <td>{t.objeto.nome}</td>
               <td>{t.quantidade}</td>
               <td>{t.descricao}</td>
+              <td>
+                {t.status === 'RESERVADA' && (
+                  <span className="acoes">
+                    <button className="leve" title="Efetivar grupo"
+                      onClick={() => api.efetivarGrupo(t.grupoId).then(carregar).catch((e) => mostrarErro(e.message))}>✓</button>
+                    <button className="leve" title="Cancelar grupo"
+                      onClick={() => api.cancelarGrupo(t.grupoId).then(carregar).catch((e) => mostrarErro(e.message))}>×</button>
+                  </span>
+                )}
+              </td>
             </tr>
           ))}
         </tbody>
@@ -254,6 +276,7 @@ function AbaTrocas({ entidades, mostrarErro }) {
 
 function AbaProducao({ entidades, mostrarErro }) {
   const [form, setForm] = useState({ produtoId: '', quantidade: '1', produtorId: '', transformadorId: '' });
+  const [cascata, setCascata] = useState(false);
   const [bom, setBom] = useState([]);
   const [resultado, setResultado] = useState(null);
   const [posicao, setPosicao] = useState([]);
@@ -278,6 +301,7 @@ function AbaProducao({ entidades, mostrarErro }) {
         quantidade: Number(form.quantidade),
         produtorId: Number(form.produtorId),
         transformadorId: Number(form.transformadorId),
+        cascata,
       });
       setResultado(trocas);
       atualizarPosicao(form.produtorId);
@@ -298,6 +322,11 @@ function AbaProducao({ entidades, mostrarErro }) {
             onChange={(v) => setForm({ ...form, produtorId: v })} placeholder="Produtor (dono do estoque)" />
           <SeletorEntidade entidades={entidades} value={form.transformadorId}
             onChange={(v) => setForm({ ...form, transformadorId: v })} placeholder="Transformador (linha)" />
+          <label className="check">
+            <input type="checkbox" checked={cascata}
+              onChange={(e) => setCascata(e.target.checked)} />
+            Cascata (produz componentes em falta)
+          </label>
           <button type="submit">Produzir</button>
         </div>
 

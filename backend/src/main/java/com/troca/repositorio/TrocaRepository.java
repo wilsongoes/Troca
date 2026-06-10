@@ -23,11 +23,18 @@ public interface TrocaRepository extends JpaRepository<Troca, Long> {
 
     /**
      * A posição (estoque/saldo) de uma entidade não é cadastrada:
-     * ela emerge das trocas. entrou - saiu, por objeto.
+     * ela emerge das trocas. Por objeto:
+     *   saldo        = efetivadas que entraram - efetivadas que saíram
+     *   comprometido = reservadas que vão sair
+     *   aReceber     = reservadas que vão entrar
      */
     @Query("""
             select t.objeto.id, t.objeto.nome, t.objeto.tipo,
-                   sum(case when t.para.id = :entidadeId then t.quantidade else -t.quantidade end)
+                   sum(case when t.status = 'EFETIVADA'
+                            then (case when t.para.id = :entidadeId then t.quantidade else -t.quantidade end)
+                            else 0 end),
+                   sum(case when t.status = 'RESERVADA' and t.de.id = :entidadeId then t.quantidade else 0 end),
+                   sum(case when t.status = 'RESERVADA' and t.para.id = :entidadeId then t.quantidade else 0 end)
             from Troca t
             where t.de.id = :entidadeId or t.para.id = :entidadeId
             group by t.objeto.id, t.objeto.nome, t.objeto.tipo

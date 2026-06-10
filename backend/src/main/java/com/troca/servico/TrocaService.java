@@ -31,6 +31,11 @@ public class TrocaService {
      */
     @Transactional
     public List<Troca> registrar(String tipo, String descricao, List<Perna> pernas) {
+        return registrar(tipo, descricao, pernas, "EFETIVADA");
+    }
+
+    @Transactional
+    public List<Troca> registrar(String tipo, String descricao, List<Perna> pernas, String status) {
         if (pernas == null || pernas.isEmpty()) {
             throw new IllegalArgumentException("Uma troca precisa de pelo menos uma perna.");
         }
@@ -51,12 +56,42 @@ public class TrocaService {
             t.setObjeto(buscar(p.objetoId(), "objeto"));
             t.setQuantidade(p.quantidade());
             t.setTipo(tipo);
+            t.setStatus(status);
             t.setDescricao(descricao);
             t.setData(agora);
             return t;
         }).toList();
 
         return trocas.saveAll(salvas);
+    }
+
+    /** A reserva vira realidade: todas as pernas do grupo passam a contar no saldo. */
+    @Transactional
+    public List<Troca> efetivarGrupo(UUID grupoId) {
+        List<Troca> grupo = grupoReservado(grupoId);
+        Instant agora = Instant.now();
+        grupo.forEach(t -> {
+            t.setStatus("EFETIVADA");
+            t.setData(agora);
+        });
+        return trocas.saveAll(grupo);
+    }
+
+    /** Reserva pode ser desfeita — só o que foi efetivado é história imutável. */
+    @Transactional
+    public void cancelarGrupo(UUID grupoId) {
+        trocas.deleteAll(grupoReservado(grupoId));
+    }
+
+    private List<Troca> grupoReservado(UUID grupoId) {
+        List<Troca> grupo = trocas.findByGrupoId(grupoId);
+        if (grupo.isEmpty()) {
+            throw new IllegalArgumentException("Grupo não encontrado: " + grupoId);
+        }
+        if (grupo.stream().anyMatch(t -> !"RESERVADA".equals(t.getStatus()))) {
+            throw new IllegalArgumentException("Grupo não está reservado — trocas efetivadas são imutáveis.");
+        }
+        return grupo;
     }
 
     private Entidade buscar(Long id, String papel) {

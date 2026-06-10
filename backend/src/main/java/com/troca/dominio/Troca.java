@@ -47,6 +47,13 @@ public class Troca {
     @Column(nullable = false)
     private String tipo;
 
+    /**
+     * EFETIVADA: aconteceu, conta no saldo. RESERVADA: compromisso futuro —
+     * aparece como comprometido/a receber, mas não move o saldo.
+     */
+    @Column(nullable = false, columnDefinition = "varchar(20) default 'EFETIVADA'")
+    private String status = "EFETIVADA";
+
     private String descricao;
 
     @Column(nullable = false)
@@ -65,6 +72,8 @@ public class Troca {
     public void setQuantidade(BigDecimal quantidade) { this.quantidade = quantidade; }
     public String getTipo() { return tipo; }
     public void setTipo(String tipo) { this.tipo = tipo; }
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
     public String getDescricao() { return descricao; }
     public void setDescricao(String descricao) { this.descricao = descricao; }
     public Instant getData() { return data; }

@@ -56,7 +56,9 @@ npm run dev   # abre http://localhost:5173
 | POST   | `/api/estruturas`             | `{paiId, filhoId, quantidade, papel}`       |
 | GET    | `/api/trocas?entidadeId=`     | Histórico de trocas                         |
 | POST   | `/api/trocas`                 | `{tipo, descricao, pernas:[{deId, paraId, objetoId, quantidade}]}` |
-| POST   | `/api/producoes`              | `{produtoId, quantidade, produtorId, transformadorId}` — explode a Estrutura em Trocas |
+| POST   | `/api/producoes`              | `{produtoId, quantidade, produtorId, transformadorId, cascata}` — explode a Estrutura em Trocas (recursivo com `cascata`) |
+| POST   | `/api/trocas/grupo/{id}/efetivar` | Reserva vira realidade: passa a contar no saldo |
+| DELETE | `/api/trocas/grupo/{id}`      | Cancela reserva (só RESERVADA — efetivada é imutável) |
 
 ## Validação já executada
 
@@ -83,9 +85,36 @@ atômico, com validação de estoque derivado:
 4. Posição final da Fábrica (tudo derivado): TV `4` (−1 vendida +5 produzidas),
    Tela `5`, Placa `5`, BRL `−500` (2500 da venda − 3000 da compra = dívida).
 
+## BOM recursivo — validado
+
+Placa-mãe ganhou estrutura própria (2 Chips + 4 Capacitores), dois níveis de
+composição. Produzir 8 TVs com só 5 placas em estoque:
+
+- Sem cascata: bloqueado ("precisa de 8, disponível 5 — use cascata").
+- Com cascata: o sistema produziu sozinho o déficit (3 placas, consumindo
+  6 chips + 12 capacitores) e depois as 8 TVs — dois grupos de troca,
+  uma transação atômica, com proteção contra ciclo na Estrutura.
+
+## Reserva — validada (sem quarto conceito)
+
+A "troca futura" não precisou de tabela nova: é um `status` na própria Troca
+(`RESERVADA` → `EFETIVADA`). A posição ganhou quatro números, todos derivados:
+
+| Número       | O que é                                   |
+|--------------|-------------------------------------------|
+| saldo        | efetivadas que entraram − que saíram      |
+| comprometido | reservadas que vão sair                   |
+| aReceber     | reservadas que vão entrar                 |
+| disponivel   | saldo − comprometido (produção valida por este) |
+
+Maria reservou 3 TVs por 7500 BRL: a Fábrica ficou com TV `saldo 12,
+comprometido 3, disponível 9` e BRL `a receber 7500` — sem mexer no saldo.
+Ao efetivar: TV `9`, BRL `6000`. Cancelar grupo efetivado é bloqueado —
+só reservas são canceláveis; o que aconteceu é história imutável.
+
 ## Próximos passos da hipótese
 
 - Modelar o caso GestaoProjeto: projeto/tarefa como Estrutura, alocação e
   conclusão como Troca.
-- BOM recursivo (componente que também tem estrutura) e produção em cascata.
-- Testar onde a teoria range: reserva (troca futura?), orçamento, permissões.
+- Testar onde a teoria range: orçamento, permissões, precificação por
+  estrutura (custo da TV = soma recursiva dos componentes).

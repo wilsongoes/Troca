@@ -120,3 +120,17 @@ th, td {
 
 .positivo { color: #16a34a; font-weight: 600; }
 .negativo { color: #dc2626; font-weight: 600; }
+
+.tag.reservada { background: #f59e0b33; color: #b45309; }
+
+.check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.9rem;
+}
+
+.check input { min-width: auto; }
+
+.acoes { display: inline-flex; gap: 4px; }
+.acoes .leve { padding: 2px 8px; }

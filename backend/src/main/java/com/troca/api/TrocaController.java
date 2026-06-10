@@ -22,7 +22,7 @@ public class TrocaController {
                                @NotNull Long objetoId, @NotNull BigDecimal quantidade) {}
 
     public record TrocaRequest(@NotBlank String tipo, String descricao,
-                               @NotEmpty List<PernaRequest> pernas) {}
+                               @NotEmpty List<PernaRequest> pernas, Boolean reservada) {}
 
     private final TrocaService servico;
     private final TrocaRepository trocas;
@@ -50,7 +50,18 @@ public class TrocaController {
         List<TrocaService.Perna> pernas = req.pernas().stream()
                 .map(p -> new TrocaService.Perna(p.deId(), p.paraId(), p.objetoId(), p.quantidade()))
                 .toList();
-        return servico.registrar(req.tipo().toUpperCase(), req.descricao(), pernas);
+        String status = Boolean.TRUE.equals(req.reservada()) ? "RESERVADA" : "EFETIVADA";
+        return servico.registrar(req.tipo().toUpperCase(), req.descricao(), pernas, status);
+    }
+
+    @PostMapping("/grupo/{grupoId}/efetivar")
+    public List<Troca> efetivar(@PathVariable UUID grupoId) {
+        return servico.efetivarGrupo(grupoId);
+    }
+
+    @DeleteMapping("/grupo/{grupoId}")
+    public void cancelar(@PathVariable UUID grupoId) {
+        servico.cancelarGrupo(grupoId);
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

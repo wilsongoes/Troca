@@ -27,4 +27,6 @@ export const api = {
   registrarTroca: (dados) => req('/trocas', { method: 'POST', body: JSON.stringify(dados) }),
 
   produzir: (dados) => req('/producoes', { method: 'POST', body: JSON.stringify(dados) }),
+  efetivarGrupo: (grupoId) => req(`/trocas/grupo/${grupoId}/efetivar`, { method: 'POST' }),
+  cancelarGrupo: (grupoId) => req(`/trocas/grupo/${grupoId}`, { method: 'DELETE' }),
 };

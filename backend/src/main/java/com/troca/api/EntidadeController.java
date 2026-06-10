@@ -21,7 +21,9 @@ public class EntidadeController {
     public record EntidadeRequest(@NotBlank String nome, @NotBlank String tipo,
                                   String descricao, Map<String, Object> atributos) {}
 
-    public record PosicaoItem(Long objetoId, String objetoNome, String objetoTipo, BigDecimal saldo) {}
+    public record PosicaoItem(Long objetoId, String objetoNome, String objetoTipo,
+                              BigDecimal saldo, BigDecimal comprometido, BigDecimal aReceber,
+                              BigDecimal disponivel) {}
 
     private final EntidadeRepository entidades;
     private final EstruturaRepository estruturas;
@@ -75,7 +77,12 @@ public class EntidadeController {
     public List<PosicaoItem> posicao(@PathVariable Long id) {
         buscar(id);
         return trocas.posicaoDaEntidade(id).stream()
-                .map(r -> new PosicaoItem((Long) r[0], (String) r[1], (String) r[2], (BigDecimal) r[3]))
+                .map(r -> {
+                    BigDecimal saldo = (BigDecimal) r[3];
+                    BigDecimal comprometido = (BigDecimal) r[4];
+                    return new PosicaoItem((Long) r[0], (String) r[1], (String) r[2],
+                            saldo, comprometido, (BigDecimal) r[5], saldo.subtract(comprometido));
+                })
                 .toList();
     }
 

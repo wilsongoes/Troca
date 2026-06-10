@@ -16,7 +16,8 @@ import java.util.Map;
 public class ProducaoController {
 
     public record ProducaoRequest(@NotNull Long produtoId, @NotNull BigDecimal quantidade,
-                                  @NotNull Long produtorId, @NotNull Long transformadorId) {}
+                                  @NotNull Long produtorId, @NotNull Long transformadorId,
+                                  Boolean cascata) {}
 
     private final ProducaoService servico;
 
@@ -28,7 +29,7 @@ public class ProducaoController {
     @ResponseStatus(HttpStatus.CREATED)
     public List<Troca> produzir(@Valid @RequestBody ProducaoRequest req) {
         return servico.produzir(req.produtoId(), req.quantidade(),
-                req.produtorId(), req.transformadorId());
+                req.produtorId(), req.transformadorId(), Boolean.TRUE.equals(req.cascata()));
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
