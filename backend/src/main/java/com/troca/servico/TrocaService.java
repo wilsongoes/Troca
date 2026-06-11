@@ -19,10 +19,15 @@ public class TrocaService {
 
     private final TrocaRepository trocas;
     private final EntidadeRepository entidades;
+    private final PosicaoService posicoes;
+    private final MotorDeEventos motor;
 
-    public TrocaService(TrocaRepository trocas, EntidadeRepository entidades) {
+    public TrocaService(TrocaRepository trocas, EntidadeRepository entidades,
+                        PosicaoService posicoes, MotorDeEventos motor) {
         this.trocas = trocas;
         this.entidades = entidades;
+        this.posicoes = posicoes;
+        this.motor = motor;
     }
 
     /**
@@ -62,7 +67,11 @@ public class TrocaService {
             return t;
         }).toList();
 
-        return trocas.saveAll(salvas);
+        List<Troca> persistidas = trocas.saveAll(salvas);
+        if ("EFETIVADA".equals(status)) {
+            motor.reagir(persistidas);
+        }
+        return persistidas;
     }
 
     /** A reserva vira realidade: todas as pernas do grupo passam a contar no saldo. */
@@ -74,13 +83,27 @@ public class TrocaService {
             t.setStatus("EFETIVADA");
             t.setData(agora);
         });
-        return trocas.saveAll(grupo);
+        List<Troca> persistidas = trocas.saveAll(grupo);
+        posicoes.invalidar(envolvidos(persistidas));
+        motor.reagir(persistidas);
+        return persistidas;
     }
 
     /** Reserva pode ser desfeita — só o que foi efetivado é história imutável. */
     @Transactional
     public void cancelarGrupo(UUID grupoId) {
-        trocas.deleteAll(grupoReservado(grupoId));
+        List<Troca> grupo = grupoReservado(grupoId);
+        trocas.deleteAll(grupo);
+        posicoes.invalidar(envolvidos(grupo));
+    }
+
+    private java.util.Set<Long> envolvidos(List<Troca> grupo) {
+        java.util.Set<Long> ids = new java.util.HashSet<>();
+        grupo.forEach(t -> {
+            ids.add(t.getDe().getId());
+            ids.add(t.getPara().getId());
+        });
+        return ids;
     }
 
     private List<Troca> grupoReservado(UUID grupoId) {

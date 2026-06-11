@@ -65,3 +65,50 @@ performance, concorrência e integridade semântica.
 de concorrência em seguida (é o risco real de produção), snapshot depois
 (resolve os dois), e os testes de abstração por último, já sobre uma base
 sólida.
+
+---
+
+# RESULTADOS — todos executados
+
+## Teste 1 — Benchmark (1.000.038 trocas, entidade quente com 101.688)
+
+| Cenário                          | P50    | P95    | Veredito |
+|----------------------------------|--------|--------|----------|
+| Entidade fria (~2k trocas)       | 32 ms  | 36 ms  | PASSA    |
+| Entidade quente, agregação total | 263 ms | 348 ms | reprova  |
+| Quente + índice covering         | 256 ms | 361 ms | reprova (custo é agregar 101k linhas, não achá-las) |
+| **Quente + snapshot (Teste 2)**  | **35 ms** | **58 ms** | **PASSA (7×)** |
+
+## Teste 3 — Concorrência (50 produções simultâneas, estoque para 25)
+
+- Sem proteção: **34 aceitas, estoque −9** — corrida real, demonstrada.
+- Com `pg_advisory_xact_lock` por produtor: **exatamente 25 aceitas,
+  estoque 0, 25 produtos**. Validação e consumo serializados por entidade.
+
+## Teste 2 — Snapshot (projeção, não quarto conceito)
+
+- Consolidação da quente (1000 objetos): 2,3 s, uma vez.
+- Prova de derivação: projeção + delta **idêntica** à agregação completa
+  nos 1000 objetos.
+- Delta vivo: troca de +777 após consolidar apareceu na posição sem
+  reconsolidar; mutação de reservas (efetivar/cancelar) invalida a projeção.
+
+## Teste 4 — Meta-modelo (a regra vive em dados)
+
+- `PACIENTE` é uma Entidade tipo `TIPO` com `atributos.obrigatorios=[cpf, convenio]`.
+- Criar PACIENTE sem CPF: **rejeitado (400)**. Com CPF: aceito.
+- Domínio clínica inteiro (paciente, consulta, pagamento) rodou **sem deploy**.
+
+## Teste 5 — Motor de eventos (a reverberação)
+
+- Regra cadastrada como Entidade tipo `REGRA`: "VENDA de TV com disponível
+  < 5 → reservar compra de 10 com o fornecedor".
+- Venda que não cruza o mínimo: nada acontece. Venda que cruza (4 < 5):
+  **pedido de 10 TVs nasce sozinho como Reserva**. Venda seguinte não
+  duplica o pedido pendente. Efetivar o pedido: disponível 13.
+
+## Conclusão da Fase 2
+
+As três objeções caíram: performance é resolvível com projeção (como nos
+bancos), concorrência com lock por entidade, e integridade semântica com o
+meta-modelo — regras como dados, sem deploy. O modelo segue em 3 tabelas.

@@ -2,15 +2,13 @@ package com.troca.api;
 
 import com.troca.dominio.Entidade;
 import com.troca.repositorio.EntidadeRepository;
-import com.troca.repositorio.EstruturaRepository;
-import com.troca.repositorio.TrocaRepository;
+import com.troca.servico.PosicaoService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
@@ -21,19 +19,12 @@ public class EntidadeController {
     public record EntidadeRequest(@NotBlank String nome, @NotBlank String tipo,
                                   String descricao, Map<String, Object> atributos) {}
 
-    public record PosicaoItem(Long objetoId, String objetoNome, String objetoTipo,
-                              BigDecimal saldo, BigDecimal comprometido, BigDecimal aReceber,
-                              BigDecimal disponivel) {}
-
     private final EntidadeRepository entidades;
-    private final EstruturaRepository estruturas;
-    private final TrocaRepository trocas;
+    private final PosicaoService posicoes;
 
-    public EntidadeController(EntidadeRepository entidades, EstruturaRepository estruturas,
-                              TrocaRepository trocas) {
+    public EntidadeController(EntidadeRepository entidades, PosicaoService posicoes) {
         this.entidades = entidades;
-        this.estruturas = estruturas;
-        this.trocas = trocas;
+        this.posicoes = posicoes;
     }
 
     @GetMapping
@@ -74,24 +65,48 @@ public class EntidadeController {
 
     /** Posição derivada das trocas: o que essa entidade tem agora. */
     @GetMapping("/{id}/posicao")
-    public List<PosicaoItem> posicao(@PathVariable Long id) {
+    public List<PosicaoService.Posicao> posicao(@PathVariable Long id) {
         buscar(id);
-        return trocas.posicaoDaEntidade(id).stream()
-                .map(r -> {
-                    BigDecimal saldo = (BigDecimal) r[3];
-                    BigDecimal comprometido = (BigDecimal) r[4];
-                    return new PosicaoItem((Long) r[0], (String) r[1], (String) r[2],
-                            saldo, comprometido, (BigDecimal) r[5], saldo.subtract(comprometido));
-                })
-                .toList();
+        return posicoes.posicao(id);
+    }
+
+    /** Consolida a posição como projeção (snapshot + delta nas próximas leituras). */
+    @PostMapping("/{id}/consolidar")
+    public List<PosicaoService.Posicao> consolidar(@PathVariable Long id) {
+        buscar(id);
+        return posicoes.consolidar(id);
     }
 
     private void aplicar(Entidade e, EntidadeRequest req) {
+        validarPeloTipo(req);
         e.setNome(req.nome());
         e.setTipo(req.tipo().toUpperCase());
         e.setDescricao(req.descricao());
         if (req.atributos() != null) {
             e.setAtributos(req.atributos());
         }
+    }
+
+    /**
+     * Meta-modelo: o Tipo é uma Entidade (tipo=TIPO) cujos atributos
+     * declaram o que é obrigatório. A regra vive em DADOS, não em código.
+     */
+    private void validarPeloTipo(EntidadeRequest req) {
+        entidades.findFirstByNomeIgnoreCaseAndTipoIgnoreCaseAndAtivoTrue(req.tipo(), "TIPO")
+                .ifPresent(tipoDef -> {
+                    Object obrigatorios = tipoDef.getAtributos() == null
+                            ? null : tipoDef.getAtributos().get("obrigatorios");
+                    if (obrigatorios instanceof List<?> campos) {
+                        for (Object campo : campos) {
+                            String chave = String.valueOf(campo);
+                            Object valor = req.atributos() == null ? null : req.atributos().get(chave);
+                            if (valor == null || String.valueOf(valor).isBlank()) {
+                                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                                        "O tipo " + tipoDef.getNome().toUpperCase()
+                                                + " exige o atributo '" + chave + "'");
+                            }
+                        }
+                    }
+                });
     }
 }

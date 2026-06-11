@@ -5,6 +5,21 @@
 > e **Troca** (uma coisa sai de alguém e vai para alguém).
 > O resto — venda, imposto, alocação, estoque, saldo — é abstração sobre esses três.
 
+**Autor da hipótese:** Wilson Goes — modelo concebido ao longo de anos e
+validado nesta prova de conceito em junho/2026. Licença MIT.
+
+**Parentesco intelectual (citado com orgulho):** REA — Resources, Events,
+Agents (William McCarthy, 1982 / ISO 15944-4), partida dobrada (Luca
+Pacioli, 1494) e event sourcing. O diferencial desta síntese: a camada de
+abstração operada com IA, regras como dados (meta-modelo e motor de
+eventos) e validação prática de 13+ domínios num único backend atômico.
+Resultados de performance, concorrência e integridade: [VALIDACAO.md](VALIDACAO.md).
+
+**Status da validação:** 5/5 testes da Fase 2 aprovados — posição P50 35ms
+com 1 milhão de trocas (snapshot 7×), concorrência exata sob 50 requisições
+simultâneas (advisory lock), projeção provadamente derivável, tipos com
+obrigatoriedade definida em dados, e eventos que disparam eventos.
+
 ## O modelo
 
 | Tabela      | O que guarda                                                                 |

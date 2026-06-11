@@ -35,12 +35,14 @@ public class PlanejamentoService {
     private final EstruturaRepository estruturas;
     private final TrocaRepository trocas;
     private final EntidadeRepository entidades;
+    private final PosicaoService posicoes;
 
     public PlanejamentoService(EstruturaRepository estruturas, TrocaRepository trocas,
-                               EntidadeRepository entidades) {
+                               EntidadeRepository entidades, PosicaoService posicoes) {
         this.estruturas = estruturas;
         this.trocas = trocas;
         this.entidades = entidades;
+        this.posicoes = posicoes;
     }
 
     @Transactional(readOnly = true)
@@ -57,9 +59,9 @@ public class PlanejamentoService {
 
         // Estoque disponível do produtor (saldo - comprometido), mutável:
         // conforme o plano aloca, o disponível vai sendo consumido.
-        Map<Long, BigDecimal> estoque = trocas.posicaoDaEntidade(produtorId).stream()
-                .collect(Collectors.toMap(r -> (Long) r[0],
-                        r -> ((BigDecimal) r[3]).subtract((BigDecimal) r[4])));
+        Map<Long, BigDecimal> estoque = posicoes.posicao(produtorId).stream()
+                .collect(Collectors.toMap(PosicaoService.Posicao::objetoId,
+                        PosicaoService.Posicao::disponivel));
 
         Map<Long, Acumulador> plano = new LinkedHashMap<>();
         explodir(produtoId, quantidade, estoque, plano, new LinkedHashSet<>());

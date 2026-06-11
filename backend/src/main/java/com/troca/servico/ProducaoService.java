@@ -29,13 +29,16 @@ public class ProducaoService {
     private final TrocaRepository trocas;
     private final EntidadeRepository entidades;
     private final TrocaService trocaService;
+    private final PosicaoService posicoes;
 
     public ProducaoService(EstruturaRepository estruturas, TrocaRepository trocas,
-                           EntidadeRepository entidades, TrocaService trocaService) {
+                           EntidadeRepository entidades, TrocaService trocaService,
+                           PosicaoService posicoes) {
         this.estruturas = estruturas;
         this.trocas = trocas;
         this.entidades = entidades;
         this.trocaService = trocaService;
+        this.posicoes = posicoes;
     }
 
     @Transactional
@@ -44,6 +47,9 @@ public class ProducaoService {
         if (quantidade == null || quantidade.signum() <= 0) {
             throw new IllegalArgumentException("Quantidade deve ser positiva.");
         }
+        // Serializa produções concorrentes do mesmo produtor: a validação de
+        // estoque e o consumo acontecem sem corrida (lock até o fim da transação).
+        trocas.travarEntidade(produtorId);
         List<Troca> acumulado = new ArrayList<>();
         produzirRecursivo(produtoId, quantidade, produtorId, transformadorId,
                 cascata, new LinkedHashSet<>(), acumulado);
@@ -100,9 +106,6 @@ public class ProducaoService {
 
     /** Disponível = saldo efetivado − comprometido em reservas. */
     private BigDecimal disponivelDe(Long entidadeId, Long objetoId) {
-        Map<Long, BigDecimal> disponiveis = trocas.posicaoDaEntidade(entidadeId).stream()
-                .collect(Collectors.toMap(r -> (Long) r[0],
-                        r -> ((BigDecimal) r[3]).subtract((BigDecimal) r[4])));
-        return disponiveis.getOrDefault(objetoId, BigDecimal.ZERO);
+        return posicoes.disponivel(entidadeId, objetoId);
     }
 }

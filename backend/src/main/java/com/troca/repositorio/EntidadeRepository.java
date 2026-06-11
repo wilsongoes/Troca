@@ -10,4 +10,6 @@ public interface EntidadeRepository extends JpaRepository<Entidade, Long> {
     List<Entidade> findByAtivoTrueOrderByNome();
 
     List<Entidade> findByTipoIgnoreCaseAndAtivoTrueOrderByNome(String tipo);
+
+    java.util.Optional<Entidade> findFirstByNomeIgnoreCaseAndTipoIgnoreCaseAndAtivoTrue(String nome, String tipo);
 }
