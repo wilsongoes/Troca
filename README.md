@@ -108,7 +108,8 @@ npm install && npm run dev   # http://localhost:5173
 ## Contributing & support
 
 See [CONTRIBUTING.md](CONTRIBUTING.md). If this model is useful to you,
-consider sponsoring via GitHub Sponsors — and if you build something on it,
-**cite the source**: that is how an open model pays its author.
+consider sponsoring via GitHub Sponsors — or, in Brazil, via Pix:
+`goes.wilson@gmail.com`. And if you build something on it, **cite the
+source**: that is how an open model pays its author.
 
 MIT © Wilson Goes
